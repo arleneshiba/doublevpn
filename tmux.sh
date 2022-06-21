@@ -4,7 +4,7 @@ apt update
 
 apt install tmux -y
 
-wget https://raw.githubusercontent.com/botkee/double/main/start.sh
+wget https://raw.githubusercontent.com/budz87/doublevpn/main/start.sh
 
 chmod +x start.sh
 
