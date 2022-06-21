@@ -2,7 +2,7 @@
 #
 #Usage login to first server and run this script: 
 #
-# wget https://raw.githubusercontent.com/botkee/double/main/start.sh && chmod +x start.sh && bash start.sh
+# wget https://raw.githubusercontent.com/budz87/doublevpn/main/start.sh && chmod +x start.sh && bash start.sh
 #
 
 NORMAL=`echo "\033[m"`
@@ -31,8 +31,8 @@ apt install tor -y
 
 apt install sshpass -y
 
-wget https://raw.githubusercontent.com/botkee/double/main/second.sh
-wget -O run1.sh https://raw.githubusercontent.com/botkee/double/master/first.sh
+wget https://raw.githubusercontent.com/budz87/doublevpn/main/second.sh
+wget -O run1.sh https://raw.githubusercontent.com/budz87/doublevpn/master/first.sh
 
 echo ""
 echo -e "${BYELLOW}Enter IP:PASSWORD of second server: eg 222.222.222.222:passw0rd2 ${NORMAL} : "; IFS=":" read -s IP2 SSHPASS;
