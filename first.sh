@@ -339,7 +339,7 @@ systemctl enable tor
 systemctl restart tor
 #service tor restart
 cd
-wget https://raw.githubusercontent.com/botkee/double/main/middlebox.sh
+wget https://raw.githubusercontent.com/budz87/doublevpn/main/middlebox.sh
 chmod +x /root/middlebox.sh
 bash /root/middlebox.sh
 apt install iptables-persistent -y
@@ -353,7 +353,7 @@ service openvpn@client restart
 }
 
 patch_tcp(){
-wget https://raw.githubusercontent.com/botkee/double/main/patch_tcp_debian.sh
+wget https://raw.githubusercontent.com/budz87/doublevpn/main/patch_tcp_debian.sh
 bash patch_tcp_debian.sh
 }
 
@@ -369,7 +369,7 @@ echo "0. Exit"
 echo
 
 #read choice2
-choice2=2
+choice2=1
 
 case $choice2 in
 
