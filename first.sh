@@ -181,7 +181,7 @@ touch /etc/openvpn/keys/ipp.txt
 
 #С содержимым:
 
-echo -e "port 643
+echo -e "port 766
 proto tcp
 dev tun
 sndbuf 0
@@ -219,7 +219,7 @@ systemctl start openvpn@server
 echo -e "client
 dev tun
 proto tcp
-remote $IP1 643
+remote $IP1 766
 resolv-retry infinite
 nobind
 persist-key
