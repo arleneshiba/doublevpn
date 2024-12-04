@@ -2,7 +2,7 @@
 #
 #Usage login to first server and run this script: 
 #
-# wget https://raw.githubusercontent.com/budz87/doublevpn/main/start.sh && chmod +x start.sh && bash start.sh
+# wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/start.sh && chmod +x start.sh && bash start.sh
 #
 
 NORMAL=`echo "\033[m"`
@@ -27,12 +27,12 @@ echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selecti
 
 apt update -y && apt upgrade -y
 apt install tmux -y
-apt install tor -y
+#apt install tor -y
 
 apt install sshpass -y
 
-wget https://raw.githubusercontent.com/budz87/doublevpn/main/second.sh
-wget -O run1.sh https://raw.githubusercontent.com/budz87/doublevpn/master/first.sh
+wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/second.sh
+wget -O run1.sh https://raw.githubusercontent.com/arleneshiba/doublevpn/master/first.sh
 
 echo ""
 echo -e "${BYELLOW}Enter IP:PASSWORD of second server: eg 222.222.222.222:passw0rd2 ${NORMAL} : "; IFS=":" read -s IP2 SSHPASS;
@@ -41,17 +41,18 @@ ssh-keyscan $IP2 >> ~/.ssh/known_hosts
 
 export SSHPASS
 
-sshpass -e torsocks scp /root/run1.sh root@$IP2:
+sshpass -e scp /root/run1.sh root@$IP2:
 rm /root/run1.sh
 #sshpass -e torsocks scp /root/second.sh root@$IP2:
 #rm /root/second.sh
 #sshpass -e torsocks ssh -o PasswordAuthentication=yes root@$IP2 "chmod +x second.sh; bash -s second.sh"
 
 
-sshpass -e torsocks ssh -o PasswordAuthentication=yes root@$IP2 'bash -s' < ~/./second.sh
+sshpass -e ssh -o PasswordAuthentication=yes root@$IP2 'bash -s' < ~/./second.sh
 
 #torsocks ssh root@$IP2
 
-sshpass -e torsocks scp -T root@$IP2:"/root/client.tar /root/run1.sh" /root/
+sshpass -e scp -T root@$IP2:/root/client.tar /root/
+sshpass -e scp -T root@$IP2:/root/run1.sh" /root/
 
 bash /root/run1.sh
