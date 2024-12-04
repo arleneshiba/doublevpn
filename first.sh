@@ -10,7 +10,7 @@ do
 # Banner
 
 f_banner(){
-echo
+echo ""
 echo "
                           .__                   __           .__   .__                   
 ___  ________    ____      |__|  ____    _______/  |_ _____   |  |  |  |    ____ _______  
@@ -25,14 +25,26 @@ ___  ________    ____      |__|  ____    _______/  |_ _____   |  |  |  |    ____
 | /         \   /       \   /     '-'     '-'
 |/           '-'         '-'
 
-For debian 10"
-echo
-echo
+For debian 12"
+echo ""
+echo ""
 
 }
 
 
-IP1=$(ip addr | grep 'inet' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)
+
+IP1=$(nslookup myip.opendns.com resolver1.opendns.com | awk '/^Address: / { print $2 }')
+
+
+
+# Если первоначальный источник не доступен, используем запасной вариант
+
+if [ -z "$IP1" ]; then
+
+  IP1=$(curl -s https://api.ipify.org)
+
+fi
+
 INTERFACE=$(ip route get 8.8.8.8 | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 #IP2=
 
@@ -45,78 +57,13 @@ apt update && apt upgrade -y
 
 apt install secure-delete -y
 
-journalctl --verify 
-
-systemctl stop systemd-journald.socket; 
-systemctl stop systemd-journald-dev-log.socket; 
-systemctl stop systemd-journald-audit.socket; 
-systemctl stop systemd-journald-dev-log.socket ; 
-systemctl stop systemd-journald.socket; 
-systemctl stop systemd-journald.service; 
-systemctl disable systemd-journald.service ; 
-systemctl disable systemd-journald.socket ; 
-systemctl disable systemd-journald-dev-log.socket ; 
-systemctl disable systemd-journald-audit.socket ; 
-systemctl disable systemd-journald-dev-log.socket ; 
-systemctl disable systemd-journald.socket; 
-
-
-if [ -d "/run/log/journal"]; then 
-cd /run/log/journal
-journalctl --verify 
-srm -lvzr * 
-else
-echo "log/journal not found"
-fi
-
-
-cd 
-
-systemctl stop rsyslog
-systemctl disable rsyslog
-
-
-cd /var/log; 
-
-srm -lvzr alternatives*
-srm -lvzr auth*
-srm -lvzr btmp*
-srm -lvzr lastlog*
-srm -lvzr syslog*
-srm -lvzr bootstrap* 
-srm -lvzr daemon*
-srm -lvzr faillog*
-srm -lvzr messages* 
-srm -lvzr wtmp*
-#srm -lvzr aptitude*
-#srm -lvzr debug*
-#srm -lvzr kern*
-
-touch alternatives.log; 
-touch auth.log; 
-touch btmp; 
-touch lastlog; 
-touch syslog; 
-touch bootstrap.log; 
-touch daemon.log; 
-touch faillog; 
-touch messages; 
-touch wtmp; 
-
-cd
-
-cd /var/log
-for file in lastlog utmp wtmp alternatives auth btmp syslog bootstrap daemon faillog messages; do
- srm -lvzr $file
- ln -s /dev/null $file
-done
 
 cd
 
 #apt install bind9 bind9utils bind9-doc -y
 
 #Установим openvpn:
-apt install openvpn easy-rsa -y
+apt install openvpn easy-rsa iptables -y
 
 #Добавим группу nogroup и пользователя nobody, от имени этого пользователя будет работать openvpn.
 addgroup nogroup
@@ -128,13 +75,13 @@ usermod -aG nogroup nobody
 tar -xvf /root/client.tar -C /etc/openvpn/
 
 
-#И создаем файл конфигурации, чтобы соеденить 2 сервера между собой.
+#И создаем файл конфигурации, чтобы соединить 2 сервера между собой.
 #nano /etc/openvpn/client.conf
 #С содержимым:
 
 echo -e "dev tun1
 remote $IP2
-port 443
+port 643
 proto tcp-client
 ifconfig 192.168.1.2 192.168.1.1
 tls-client
@@ -144,7 +91,7 @@ remote-cert-tls server
 ca /etc/openvpn/client-keys/ca.crt
 cert /etc/openvpn/client-keys/client.crt
 key /etc/openvpn/client-keys/client.key
-dh /etc/openvpn/client-keys/dh.pem
+dh none
 tls-auth /etc/openvpn/client-keys/tls.key 1
 cipher AES-256-CBC
 persist-key
@@ -154,9 +101,11 @@ verb 0
 up /etc/openvpn/client-keys/up.sh
 down /etc/openvpn/client-keys/down.sh
 comp-lzo
-tun-mtu 1500
+tun-mtu 1400
 user nobody
 group nogroup" > /etc/openvpn/client.conf
+
+
 
 #Создадим up\down скрипты для настройки маршрутизации трафика.
 #nano /etc/openvpn/client-keys/up.sh
@@ -215,7 +164,7 @@ cd $easyrsalocation
 openvpn --genkey --secret pki/tls.key
 
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
-mkdir /etc/openvpn/keys
+mkdir -p /etc/openvpn/keys
 cp -R pki/ca.crt /etc/openvpn/keys/
 cp -R pki/dh.pem /etc/openvpn/keys/
 cp -R pki/tls.key /etc/openvpn/keys/
@@ -230,7 +179,7 @@ touch /etc/openvpn/keys/ipp.txt
 
 #С содержимым:
 
-echo -e "port 443
+echo -e "port 643
 proto tcp
 dev tun
 sndbuf 0
@@ -238,7 +187,7 @@ rcvbuf 0
 ca keys/ca.crt
 cert keys/server.crt
 key keys/server.key
-dh keys/dh.pem
+dh none
 auth SHA512
 tls-auth keys/tls.key 0
 topology subnet
@@ -248,13 +197,15 @@ push \"redirect-gateway def1 bypass-dhcp\"
 #push \"dhcp-option DNS 8.8.8.8\"
 #push \"dhcp-option DNS 8.8.4.4\"
 push \"dhcp-option DNS 192.168.1.1\"
-keepalive 10 120
+keepalive 30 120
 cipher AES-256-CBC
 user nobody
 group nogroup
 persist-key
 persist-tun
 verb 0" > /etc/openvpn/server.conf
+
+server1_fingerprint=$(openssl x509 -fingerprint -sha256 -in /etc/openvpn/keys/server.crt -noout | cut -d= -f2)
 
 #Добавляем сервис openvpn в автозагрузку:
 systemctl enable openvpn@server
@@ -266,7 +217,7 @@ systemctl start openvpn@server
 echo -e "client
 dev tun
 proto tcp
-remote $IP1 443
+remote $IP1 643
 resolv-retry infinite
 nobind
 persist-key
@@ -274,86 +225,67 @@ persist-tun
 remote-cert-tls server
 auth SHA512
 cipher AES-256-CBC
-ignore-unknown-option block-outside-dns
-block-outside-dns
+#ignore-unknown-option block-outside-dns
+#block-outside-dns
 verb 3
 tls-auth tls.key 1" > /root/client
 
 
 
-# Сгенерируем 20 сертификатов
-# start=$1
-# end=$2
-
+# Устанавливаем диапазон клиентов
 start=1
 end=20
-for ((i=start; i<=end; i++))
-do
-   
-cd /usr/share/easy-rsa
-./easyrsa build-client-full client0$i nopass
 
+# Устанавливаем рабочие директории
 BASE_CONFIG=/root/client
 KEY_DIR=/usr/share/easy-rsa/pki/private
 KEY_CA_DIR=/usr/share/easy-rsa/pki
 CRT_DIR=/usr/share/easy-rsa/pki/issued
-
 OUTPUT_DIR=/root/configs
 
-mkdir /root/configs
+# Создаем директорию для конфигов
+mkdir -p /root/configs
 
-cat ${BASE_CONFIG} \
-      <(echo -e '<ca>') \
-      ${KEY_CA_DIR}/ca.crt \
-      <(echo -e '</ca>\n<cert>') \
-      ${CRT_DIR}/client0${i}.crt \
-      <(echo -e '</cert>\n<key>') \
-      ${KEY_DIR}/client0${i}.key \
-      <(echo -e '</key>\n<tls-auth>') \
-      ${KEY_CA_DIR}/tls.key \
-      <(echo -e '</tls-auth>') \
-	  <(echo -e '<dh>') \
-	  ${KEY_CA_DIR}/dh.pem \
-	  <(echo -e '</dh>') \
-      > ${OUTPUT_DIR}/client0${i}.ovpn
+# Автоматическое подтверждение подписей
+export EASYRSA_BATCH=1
 
+# Переключаемся в директорию Easy-RSA
+cd /usr/share/easy-rsa
+
+# Удаляем устаревший DH, если он существует (не обязателен)
+rm -f pki/dh.pem
+
+# Генерация клиентских конфигураций
+for ((i=start; i<=end; i++))
+do
+    # Генерация клиентского сертификата без пароля
+    ./easyrsa build-client-full client0$i nopass
+
+    # Создание .ovpn-конфига
+    cat ${BASE_CONFIG} \
+        <(echo -e '<ca>') \
+        ${KEY_CA_DIR}/ca.crt \
+        <(echo -e '</ca>\n<peer-fingerprint>') \
+        <(echo -e "${server1_fingerprint}") \
+        <(echo -e '</peer-fingerprint>\n<cert>') \
+        ${CRT_DIR}/client0${i}.crt \
+        <(echo -e '</cert>\n<key>') \
+        ${KEY_DIR}/client0${i}.key \
+        <(echo -e '</key>\n<tls-auth>') \
+        ${KEY_CA_DIR}/tls.key \
+        <(echo -e '</tls-auth>') \
+        > ${OUTPUT_DIR}/client0${i}.ovpn
 done
 
+# Проверка созданных конфигураций
 cd /root/configs
 ls
 }
 
-install_tor_middlebox(){
-f_banner
-useradd -m anon
-usermod -a -G nogroup anon
-sed -i 's/nobody/anon/g' /etc/openvpn/client.conf
-echo "" >> /etc/tor/torrc
-echo "VirtualAddrNetwork 10.192.0.0/10" >> /etc/tor/torrc
-echo "AutomapHostsOnResolve 1" >> /etc/tor/torrc
-echo "DNSPort 5353" >> /etc/tor/torrc
-echo "TransPort 9040" >> /etc/tor/torrc
-echo "ExcludeNodes {RU},{FR},{US},{AU},{CA},{NZ},{GB},{DK},{SE},{NO},{NL},{FR},{DE},{BE},{IT},{ES}" >> /etc/tor/torrc
-echo "ExcludeExitNodes {RU},{US},{AU},{CA},{NZ},{GB},{FR},{DK},{SE},{NO},{NL},{FR},{DE},{BE},{IT},{ES}" >> /etc/tor/torrc
-systemctl enable tor
-systemctl restart tor
-#service tor restart
-cd
-wget https://raw.githubusercontent.com/budz87/doublevpn/main/middlebox.sh
-chmod +x /root/middlebox.sh
-bash /root/middlebox.sh
-apt install iptables-persistent -y
-iptables-save
-#mv middlebox.sh /etc/network/if-up.d/middlebox.sh
-#chmod +x /etc/network/if-up.d/middlebox.sh
-#bash /etc/network/if-up.d/middlebox.sh
-#echo "bash /root/middlebox.sh" >> /etc/openvpn/client-keys/up.sh
-#mv /root/middlebox.sh /etc/network/if-up.d/iptables
-service openvpn@client restart
-}
+
 
 patch_tcp(){
-wget https://raw.githubusercontent.com/budz87/doublevpn/main/patch_tcp_debian.sh
+wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/patch_tcp_debian.sh
 bash patch_tcp_debian.sh
 }
 
@@ -363,8 +295,7 @@ echo -e "\e[93m[+]\e[00m Выберите требуемую опцию"
 echo -e "\e[34m---------------------------------------------------------------------------------------------------------\e[00m"
 echo ""
 echo "1. Install Simple Double Openvpn (VPN1-VPN2)"
-echo "2. Install Openvpn With Tor Middlebox (VPN1-TOR-VPN2)"
-echo "3. Install Tor Middlebox only (If Double Openvpn Was Installed)"
+echo "2. Install Simple Double Openvpn (VPN1-VPN2) and patch"
 echo "0. Exit"
 echo
 
@@ -384,14 +315,9 @@ install_vpn_only
 
 2)
 install_vpn_only
-install_tor_middlebox
 echo "Downloads your vpn configs from /root/configs"
 patch_tcp
 exit 0
-;;
-
-3)
-install_tor_middlebox
 ;;
 
 0)
