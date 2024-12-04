@@ -189,7 +189,7 @@ cd
 sed -i -e "s/ip2replace/$IP2/g" run1.sh
 sed -i -e "s/server2_fingerprint2replace/$server2_fingerprint/g" run1.sh
 
-#wget https://raw.githubusercontent.com/budz87/doublevpn/main/patch_tcp_debian.sh
+#wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/patch_tcp_debian.sh
 #bash patch_tcp_debian.sh
 exit
 
