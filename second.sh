@@ -91,7 +91,7 @@ mv client.tar /root/
 echo "port 843
 dev tun0
 proto tcp-server
-ifconfig 192.168.1.1 192.168.1.2
+ifconfig 192.168.99.1 192.168.99.2
 tls-server
 daemon
 ca /etc/openvpn/keys/ca.crt
@@ -124,7 +124,7 @@ server2_fingerprint=$(openssl x509 -fingerprint -sha256 -in /etc/openvpn/keys/se
 #nano /etc/openvpn/keys/up.sh
 
 echo -e "#!/bin/sh
-ip route add 10.8.0.0/24 via 192.168.1.2 dev tun0
+ip route add 10.8.0.0/24 via 192.168.99.2 dev tun0
 #iptables -t nat -A POSTROUTING --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2
 iptables -t nat -A POSTROUTING -o tun1 -j MASQUERADE
 echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/keys/up.sh
@@ -132,7 +132,7 @@ echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/keys/up.sh
 #nano /etc/openvpn/keys/down.sh
 
 echo -e "#!/bin/sh
-ip route del 10.8.0.0/24 via 192.168.1.2 dev tun0
+ip route del 10.8.0.0/24 via 192.168.99.2 dev tun0
 #iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2" > /etc/openvpn/keys/down.sh
 iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE
 #
