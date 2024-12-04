@@ -97,6 +97,9 @@ daemon
 ca /etc/openvpn/keys/ca.crt
 cert /etc/openvpn/keys/server.crt
 key /etc/openvpn/keys/server.key
+<peer-fingerprint>
+client_for_server2_fingerprint_replace
+<peer-fingerprint>
 dh none
 tls-auth /etc/openvpn/keys/tls.key 0
 cipher AES-256-CBC
