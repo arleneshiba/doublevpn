@@ -56,3 +56,12 @@ sshpass -e scp -T root@$IP2:/root/client.tar /root/
 sshpass -e scp -T root@$IP2:/root/run1.sh" /root/
 
 bash /root/run1.sh
+
+CLIENT_FOR_SERVER2_FINGERPRINT=$(openssl x509 -fingerprint -sha256 -noout -in /etc/openvpn/client.conf)
+
+cat << EOF > /root/enable_second.sh
+sed -i -e 's/client_for_server2_fingerprint_replace/$CLIENT_FOR_SERVER2_FINGERPRINT/g' /etc/openvpn/server.conf
+systemctl enable --now openvpn@server.service
+EOF
+chmood +x /root/enable_second.sh
+sshpass -e ssh -o PasswordAuthentication=yes root@$IP2 'bash -s' < ~/./enable_second.sh
