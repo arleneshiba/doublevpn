@@ -49,6 +49,7 @@ INTERFACE=$(ip route get 8.8.8.8 | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 #IP2=
 
 IP2=ip2replace
+SERVER2_FINGERPRINT=server2_fingerprint2replace
 
 install_vpn_only(){
 f_banner
@@ -81,13 +82,16 @@ tar -xvf /root/client.tar -C /etc/openvpn/
 
 echo -e "dev tun1
 remote $IP2
-port 643
+port 843
 proto tcp-client
-ifconfig 192.168.1.2 192.168.1.1
+ifconfig 192.168.99.2 192.168.99.1
 tls-client
 daemon
 script-security 2
 remote-cert-tls server
+<peer-fingerprint>
+$SERVER2_FINGERPRINT
+<peer-fingerprint>
 ca /etc/openvpn/client-keys/ca.crt
 cert /etc/openvpn/client-keys/client.crt
 key /etc/openvpn/client-keys/client.key
@@ -105,20 +109,18 @@ tun-mtu 1400
 user nobody
 group nogroup" > /etc/openvpn/client.conf
 
-
-
 #Создадим up\down скрипты для настройки маршрутизации трафика.
 #nano /etc/openvpn/client-keys/up.sh
 
 echo "#!/bin/sh
-ip route add default via 192.168.1.1 dev tun1 table 10
+ip route add default via 192.168.99.1 dev tun1 table 10
 ip rule add from 10.8.0.0/24 lookup 10 pref 10
 echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/client-keys/up.sh
 
 #nano /etc/openvpn/client-keys/down.sh
 
 echo "#!/bin/sh
-ip route del default via 192.168.1.1 dev tun1 table 10
+ip route del default via 192.168.99.1 dev tun1 table 10
 ip rule del from 10.8.0.0/24 lookup 10 pref 10" > /etc/openvpn/client-keys/down.sh
 
 #Дадим им права на выполнение:
@@ -130,12 +132,12 @@ systemctl enable openvpn@client
 systemctl start openvpn@client
 
 #Необходимо проверить как у нас поднялся тонель, попингуем внутренний адрес 192.168.1.1
-#ping 192.168.1.1
+#ping 192.168.99.1
 
-#PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.
-#64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=0.741 ms
-#64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=0.842 ms
-#64 bytes from 192.168.1.1: icmp_seq=3 ttl=64 time=1.32 ms
+#PING 192.168.1.1 (192.168.99.1) 56(84) bytes of data.
+#64 bytes from 192.168.99.1: icmp_seq=1 ttl=64 time=0.741 ms
+#64 bytes from 192.168.99.1: icmp_seq=2 ttl=64 time=0.842 ms
+#64 bytes from 192.168.99.1: icmp_seq=3 ttl=64 time=1.32 ms
 
 #Если ping проходит то все отлично, продолжаем. Если нет — необходимо найти причину почему не установилась связь между двумя серверами.
 
@@ -196,7 +198,7 @@ ifconfig-pool-persist keys/ipp.txt
 push \"redirect-gateway def1 bypass-dhcp\"
 #push \"dhcp-option DNS 8.8.8.8\"
 #push \"dhcp-option DNS 8.8.4.4\"
-push \"dhcp-option DNS 192.168.1.1\"
+push \"dhcp-option DNS 192.168.99.1\"
 keepalive 30 120
 cipher AES-256-CBC
 user nobody
