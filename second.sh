@@ -1,6 +1,18 @@
 #!/bin/bash
 
-IP2=$(ip addr | grep 'inet' | grep -v inet6 | grep -vE '127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)
+IP2=$(nslookup myip.opendns.com resolver1.opendns.com | awk '/^Address: / { print $2 }')
+
+
+
+# Если первоначальный источник не доступен, используем запасной вариант
+
+if [ -z "$IP2" ]; then
+
+  IP2=$(curl -s https://api.ipify.org)
+
+fi
+
+
 INTERFACE=$(ip route get 8.8.8.8 | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 
 #echo -e "Enter IP of first server: eg 111.111.111.111"; read IP1;
@@ -14,78 +26,12 @@ apt update -y && apt upgrade -y
 
 apt install secure-delete -y
 
-journalctl --verify 
-
-systemctl stop systemd-journald.socket; 
-systemctl stop systemd-journald-dev-log.socket; 
-systemctl stop systemd-journald-audit.socket; 
-systemctl stop systemd-journald-dev-log.socket ; 
-systemctl stop systemd-journald.socket; 
-systemctl stop systemd-journald.service; 
-systemctl disable systemd-journald.service ; 
-systemctl disable systemd-journald.socket ; 
-systemctl disable systemd-journald-dev-log.socket ; 
-systemctl disable systemd-journald-audit.socket ; 
-systemctl disable systemd-journald-dev-log.socket ; 
-systemctl disable systemd-journald.socket; 
-
-
-if [ -d "/run/log/journal"]; then 
-cd /run/log/journal
-journalctl --verify 
-srm -lvzr * 
-else
-echo "log/journal not found"
-fi
-
-
-cd 
-
-systemctl stop rsyslog
-systemctl disable rsyslog
-
-
-cd /var/log; 
-
-srm -lvzr alternatives*
-srm -lvzr auth*
-srm -lvzr btmp*
-srm -lvzr lastlog*
-srm -lvzr syslog*
-srm -lvzr bootstrap* 
-srm -lvzr daemon*
-srm -lvzr faillog*
-srm -lvzr messages* 
-srm -lvzr wtmp*
-#srm -lvzr aptitude*
-#srm -lvzr debug*
-#srm -lvzr kern*
-
-touch alternatives.log; 
-touch auth.log; 
-touch btmp; 
-touch lastlog; 
-touch syslog; 
-touch bootstrap.log; 
-touch daemon.log; 
-touch faillog; 
-touch messages; 
-touch wtmp; 
-
-cd
-
-cd /var/log
-for file in lastlog utmp wtmp alternatives auth btmp syslog bootstrap daemon faillog messages; do
- srm -lvzr $file
- ln -s /dev/null $file
-done
-
 cd
 
 #apt install bind9 bind9utils bind9-doc -y
 
 #Установим openvpn:
-apt install openvpn easy-rsa -y
+apt install openvpn easy-rsa iptables -y
 
 #Добавим группу nogroup и пользователя nobody, от имени этого пользователя будет работать openvpn.
 addgroup nogroup
@@ -113,7 +59,7 @@ cd $easyrsalocation
 ./easyrsa --batch build-client-full client nopass
 
 #Генерируем ключ Диффи-Хеллмана:
-./easyrsa --batch gen-dh
+#./easyrsa --batch gen-dh
 
 #Генерируем ключ для tls авторизации:
 openvpn --genkey --secret pki/tls.key
@@ -121,7 +67,7 @@ openvpn --genkey --secret pki/tls.key
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
 mkdir /etc/openvpn/keys
 cp -R pki/ca.crt /etc/openvpn/keys/
-cp -R pki/dh.pem /etc/openvpn/keys/
+#cp -R pki/dh.pem /etc/openvpn/keys/
 cp -R pki/tls.key /etc/openvpn/keys/
 cp -R pki/private/server.key /etc/openvpn/keys/
 cp -R pki/issued/server.crt /etc/openvpn/keys/
@@ -130,7 +76,7 @@ cp -R pki/issued/server.crt /etc/openvpn/keys/
 
 mkdir client-keys
 cp -R pki/ca.crt client-keys/
-cp -R pki/dh.pem client-keys/
+#cp -R pki/dh.pem client-keys/
 cp -R pki/tls.key client-keys/
 cp -R pki/private/client.key client-keys/
 cp -R pki/issued/client.crt client-keys/
@@ -142,7 +88,7 @@ mv client.tar /root/
 
 #С содержимым:
 
-echo "port 443
+echo "port 843
 dev tun0
 proto tcp-server
 ifconfig 192.168.1.1 192.168.1.2
@@ -151,7 +97,7 @@ daemon
 ca /etc/openvpn/keys/ca.crt
 cert /etc/openvpn/keys/server.crt
 key /etc/openvpn/keys/server.key
-dh /etc/openvpn/keys/dh.pem
+dh none
 tls-auth /etc/openvpn/keys/tls.key 0
 cipher AES-256-CBC
 max-clients 1
@@ -168,20 +114,24 @@ down /etc/openvpn/keys/down.sh
 user nobody
 group nogroup" > /etc/openvpn/server.conf
 
+server2_fingerprint=$(openssl x509 -fingerprint -sha256 -in /etc/openvpn/keys/server.crt -noout | cut -d= -f2)
+
+
 #Создадим up\down скрипты для настройки маршрутизации трафика. Необходимо отредактировать параметры -o $INTERFACE и —to-source $IP2
 #nano /etc/openvpn/keys/up.sh
 
 echo -e "#!/bin/sh
 ip route add 10.8.0.0/24 via 192.168.1.2 dev tun0
-iptables -t nat -A POSTROUTING --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2
+#iptables -t nat -A POSTROUTING --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2
+iptables -t nat -A POSTROUTING -o tun1 -j MASQUERADE
 echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/keys/up.sh
 
 #nano /etc/openvpn/keys/down.sh
 
 echo -e "#!/bin/sh
 ip route del 10.8.0.0/24 via 192.168.1.2 dev tun0
-iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2" > /etc/openvpn/keys/down.sh
-
+#iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2" > /etc/openvpn/keys/down.sh
+iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE
 #
 
 apt install bind9 -y
@@ -200,8 +150,8 @@ echo "options {
 
            recursion yes;
            forwarders {
-           208.67.222.222;
-           208.67.220.220;
+           8.8.8.8;
+           8.8.4.4;
             };
             forward only;
 
@@ -234,8 +184,10 @@ systemctl start openvpn@server
 #Скачиваем скрипт для первого сервера
 cd
 sed -i -e "s/ip2replace/$IP2/g" run1.sh
-wget https://raw.githubusercontent.com/budz87/doublevpn/main/patch_tcp_debian.sh
-bash patch_tcp_debian.sh
+sed -i -e "s/server2_fingerprint2replace/$server2_fingerprint/g" run1.sh
+
+#wget https://raw.githubusercontent.com/budz87/doublevpn/main/patch_tcp_debian.sh
+#bash patch_tcp_debian.sh
 exit
 
 #Отправляем подготовленные сертификаты на сервер А:
