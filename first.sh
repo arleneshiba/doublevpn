@@ -85,26 +85,25 @@ remote $IP2
 port 843
 proto tcp-client
 ifconfig 192.168.99.2 192.168.99.1
-tls-client
 daemon
 script-security 2
-remote-cert-tls server
 <peer-fingerprint>
 $SERVER2_FINGERPRINT
 </peer-fingerprint>
-ca /etc/openvpn/client-keys/ca.crt
-cert /etc/openvpn/client-keys/client.crt
-key /etc/openvpn/client-keys/client.key
 dh none
-tls-auth /etc/openvpn/client-keys/tls.key 1
-cipher AES-256-CBC
+cipher AES-256-GCM
+ncp-ciphers AES-256-GCM:CHACHA20-POLY1305
+fragment 1300
+mssfix 1300
 persist-key
 persist-tun
 log /dev/null
 verb 0
 up /etc/openvpn/client-keys/up.sh
 down /etc/openvpn/client-keys/down.sh
-comp-lzo
+script-security 3
+compress lz4-v2
+tls-version-min 1.2
 tun-mtu 1400
 user nobody
 group nogroup" > /etc/openvpn/client.conf
@@ -191,12 +190,8 @@ push \"rcvbuf 524288\"
 ca keys/ca.crt
 cert keys/server.crt
 key keys/server.key
-<peer-fingerprint>
-client1_for_server1_fingerprint_to_replace
-</peer-fingerprint>
 dh none
 auth SHA512
-tls-auth keys/tls.key 0
 topology subnet
 server 10.8.0.0 255.255.255.0
 ifconfig-pool-persist keys/ipp.txt
@@ -205,7 +200,16 @@ push \"redirect-gateway def1 bypass-dhcp\"
 #push \"dhcp-option DNS 8.8.4.4\"
 push \"dhcp-option DNS 192.168.99.1\"
 keepalive 30 120
-cipher AES-256-CBC
+push \"block-outside-dns\"
+tls-crypt keys/tls.key
+cipher AES-256-GCM
+ncp-ciphers AES-256-GCM:CHACHA20-POLY1305
+tls-version-min 1.2
+verify-client-cert require
+tun-mtu-extra 32
+compress lz4-v2
+fragment 1300
+mssfix 1300
 user nobody
 group nogroup
 persist-key
@@ -223,7 +227,7 @@ systemctl start openvpn@server
 
 #Создаем skeleton в который допишем сертификаты
 echo -e "client
-dev tun
+dev tun0
 proto tcp
 remote $IP1 766
 resolv-retry infinite
@@ -232,34 +236,30 @@ persist-key
 persist-tun
 remote-cert-tls server
 auth SHA512
-cipher AES-256-CBC
+cipher AES-256-GCM
+ncp-ciphers AES-256-GCM:CHACHA20-POLY1305
 #ignore-unknown-option block-outside-dns
 #block-outside-dns
 verb 3
 tun-mtu 1400
 tls-auth tls.key 1" > /root/client
 
-
+# Устанавливаем рабочие директории
+BASE_CONFIG="/root/client"
+OUTPUT_DIR="/root/configs"
 
 # Устанавливаем диапазон клиентов
 start=1
 end=20
 
-# Устанавливаем рабочие директории
-BASE_CONFIG=/root/client
-KEY_DIR=/usr/share/easy-rsa/pki/private
-KEY_CA_DIR=/usr/share/easy-rsa/pki
-CRT_DIR=/usr/share/easy-rsa/pki/issued
-OUTPUT_DIR=/root/configs
-
-# Создаем директорию для конфигов
-mkdir -p /root/configs
+# Создаем директорию для конфигов, если она не существует
+mkdir -p "$OUTPUT_DIR"
 
 # Автоматическое подтверждение подписей
 export EASYRSA_BATCH=1
 
 # Переключаемся в директорию Easy-RSA
-cd /usr/share/easy-rsa
+cd /usr/share/easy-rsa || { echo "Ошибка перехода в директорию /usr/share/easy-rsa"; exit 1; }
 
 # Удаляем устаревший DH, если он существует (не обязателен)
 rm -f pki/dh.pem
@@ -268,29 +268,24 @@ rm -f pki/dh.pem
 for ((i=start; i<=end; i++))
 do
     # Генерация клиентского сертификата без пароля
-    ./easyrsa build-client-full client0$i nopass
+    ./easyrsa build-client-full client0$i nopass || { echo "Ошибка генерации сертификата для client0$i"; exit 1; }
 
-    # Создание .ovpn-конфига
-    cat ${BASE_CONFIG} \
-        <(echo -e '<ca>') \
-        ${KEY_CA_DIR}/ca.crt \
-        <(echo -e '</ca>\n<peer-fingerprint>') \
-        <(echo -e "${server1_fingerprint}") \
-        <(echo -e '</peer-fingerprint>\n<cert>') \
-        ${CRT_DIR}/client0${i}.crt \
-        <(echo -e '</cert>\n<key>') \
-        ${KEY_DIR}/client0${i}.key \
-        <(echo -e '</key>\n<tls-auth>') \
-        ${KEY_CA_DIR}/tls.key \
+    # Создание .ovpn-конфига, только с отпечатком сервера и другими нужными параметрами
+    cat "$BASE_CONFIG" \
+        <(echo -e '<peer-fingerprint>') \
+        "$server1_fingerprint" \
+        <(echo -e '</peer-fingerprint>\n<tls-auth>') \
+        "/usr/share/easy-rsa/pki/ta.key" \
         <(echo -e '</tls-auth>') \
-        > ${OUTPUT_DIR}/client0${i}.ovpn
+        > "$OUTPUT_DIR/client0${i}.ovpn" || { echo "Ошибка создания конфигурации для client0$i"; exit 1; }
+
+    echo "Конфигурация для client0$i создана"
 done
 
 # Проверка созданных конфигураций
-cd /root/configs
-ls
+cd "$OUTPUT_DIR" || { echo "Ошибка перехода в директорию конфигураций"; exit 1; }
+ls -l
 
-client1_for_server1_fingerprint=$(openssl x509 -fingerprint -sha256 -noout -in configs/client01.ovpn)
 }
 
 sed -i -e 's/client1_for_server1_fingerprint_to_replace/$client1_for_server1_fingerprint/g' /etc/openvpn/server.conf
