@@ -97,9 +97,6 @@ daemon
 ca /etc/openvpn/keys/ca.crt
 cert /etc/openvpn/keys/server.crt
 key /etc/openvpn/keys/server.key
-<peer-fingerprint>
-client_for_server2_fingerprint_replace
-<peer-fingerprint>
 dh none
 tls-auth /etc/openvpn/keys/tls.key 0
 cipher AES-256-CBC
@@ -180,10 +177,10 @@ chmod +x /etc/openvpn/keys/up.sh
 chmod +x /etc/openvpn/keys/down.sh
 
 #Добавим openvpn в автозагрузку:
-#systemctl enable openvpn@server
+systemctl enable openvpn@server
 
 #Запустим openvpn:
-#systemctl start openvpn@server
+systemctl start openvpn@server
 
 
 
