@@ -141,9 +141,9 @@ echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/keys/up.sh
 
 echo -e "#!/bin/sh
 ip route del 10.8.0.0/24 via 192.168.99.2 dev tun0
-#iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2" > /etc/openvpn/keys/down.sh
-iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE
-#
+#iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2"
+iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE > /etc/openvpn/keys/down.sh
+
 
 apt install bind9 -y
 
