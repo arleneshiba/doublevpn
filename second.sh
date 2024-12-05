@@ -104,14 +104,17 @@ dh none
 tls-auth /etc/openvpn/keys/tls.key 0
 cipher AES-256-CBC
 max-clients 1
+tun-mtu 1400
 persist-key
 persist-tun
 script-security 3
 keepalive 10 120
 log /dev/null
 comp-lzo
-sndbuf 0
-rcvbuf 0
+sndbuf 524288
+rcvbuf 524288
+push "sndbuf 524288"
+push "rcvbuf 524288"
 up /etc/openvpn/keys/up.sh
 down /etc/openvpn/keys/down.sh
 user nobody
