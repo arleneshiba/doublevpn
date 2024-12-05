@@ -156,13 +156,13 @@ cd $easyrsalocation
 ./easyrsa --batch build-server-full server nopass
 
 #Генерируем сертификаты клиентов меняя common name (client01):
-./easyrsa --batch build-client-full client01 nopass
+#./easyrsa --batch build-client-full client01 nopass
 
 #Генерируем ключ Диффи-Хеллмана:
 #./easyrsa --batch gen-dh
 
 #Генерируем ключ для tls авторизации:
-openvpn --genkey --secret pki/tls.key
+openvpn --genkey secret pki/tls.key
 
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
 mkdir -p /etc/openvpn/keys
@@ -288,7 +288,6 @@ ls -l
 
 }
 
-sed -i -e 's/client1_for_server1_fingerprint_to_replace/$client1_for_server1_fingerprint/g' /etc/openvpn/server.conf
 
 patch_tcp(){
 wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/patch_tcp_debian.sh
