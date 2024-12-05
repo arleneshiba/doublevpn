@@ -91,7 +91,7 @@ script-security 2
 remote-cert-tls server
 <peer-fingerprint>
 $SERVER2_FINGERPRINT
-<peer-fingerprint>
+</peer-fingerprint>
 ca /etc/openvpn/client-keys/ca.crt
 cert /etc/openvpn/client-keys/client.crt
 key /etc/openvpn/client-keys/client.key
@@ -160,7 +160,7 @@ cd $easyrsalocation
 ./easyrsa --batch build-client-full client01 nopass
 
 #Генерируем ключ Диффи-Хеллмана:
-./easyrsa --batch gen-dh
+#./easyrsa --batch gen-dh
 
 #Генерируем ключ для tls авторизации:
 openvpn --genkey --secret pki/tls.key
@@ -168,7 +168,7 @@ openvpn --genkey --secret pki/tls.key
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
 mkdir -p /etc/openvpn/keys
 cp -R pki/ca.crt /etc/openvpn/keys/
-cp -R pki/dh.pem /etc/openvpn/keys/
+#cp -R pki/dh.pem /etc/openvpn/keys/
 cp -R pki/tls.key /etc/openvpn/keys/
 cp -R pki/private/server.key /etc/openvpn/keys/
 cp -R pki/issued/server.crt /etc/openvpn/keys/
@@ -186,11 +186,14 @@ proto tcp
 dev tun
 sndbuf 524288
 rcvbuf 524288
-push "sndbuf 524288"
-push "rcvbuf 524288"
+push \"sndbuf 524288\"
+push \"rcvbuf 524288\"
 ca keys/ca.crt
 cert keys/server.crt
 key keys/server.key
+<peer-fingerprint>
+client1_for_server1_fingerprint_to_replace
+</peer-fingerprint>
 dh none
 auth SHA512
 tls-auth keys/tls.key 0
@@ -286,9 +289,11 @@ done
 # Проверка созданных конфигураций
 cd /root/configs
 ls
+
+client1_for_server1_fingerprint=$(openssl x509 -fingerprint -sha256 -noout -in configs/client01.ovpn)
 }
 
-
+sed -i -e 's/client1_for_server1_fingerprint_to_replace/$client1_for_server1_fingerprint/g' /etc/openvpn/server.conf
 
 patch_tcp(){
 wget https://raw.githubusercontent.com/arleneshiba/doublevpn/main/patch_tcp_debian.sh
