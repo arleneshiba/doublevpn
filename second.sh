@@ -180,10 +180,10 @@ chmod +x /etc/openvpn/keys/up.sh
 chmod +x /etc/openvpn/keys/down.sh
 
 #Добавим openvpn в автозагрузку:
-systemctl enable openvpn@server
+#systemctl enable openvpn@server
 
 #Запустим openvpn:
-systemctl start openvpn@server
+#systemctl start openvpn@server
 
 
 
