@@ -62,7 +62,7 @@ cd $easyrsalocation
 #./easyrsa --batch gen-dh
 
 #Генерируем ключ для tls авторизации:
-openvpn --genkey --secret pki/tls.key
+openvpn --genkey secret pki/tls.key
 
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
 mkdir /etc/openvpn/keys
