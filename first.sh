@@ -184,8 +184,10 @@ touch /etc/openvpn/keys/ipp.txt
 echo -e "port 766
 proto tcp
 dev tun
-sndbuf 0
-rcvbuf 0
+sndbuf 524288
+rcvbuf 524288
+push "sndbuf 524288"
+push "rcvbuf 524288"
 ca keys/ca.crt
 cert keys/server.crt
 key keys/server.key
@@ -205,6 +207,7 @@ user nobody
 group nogroup
 persist-key
 persist-tun
+tun-mtu 1400
 verb 0" > /etc/openvpn/server.conf
 
 server1_fingerprint=$(openssl x509 -fingerprint -sha256 -in /etc/openvpn/keys/server.crt -noout | cut -d= -f2)
@@ -230,6 +233,7 @@ cipher AES-256-CBC
 #ignore-unknown-option block-outside-dns
 #block-outside-dns
 verb 3
+tun-mtu 1400
 tls-auth tls.key 1" > /root/client
 
 
