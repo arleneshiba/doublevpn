@@ -63,6 +63,7 @@ cd $easyrsalocation
 
 #Генерируем ключ для tls авторизации:
 openvpn --genkey --secret pki/tls.key
+openvpn --genkey secret pki/tls.key
 
 #Сертификаты для openvpn готовы. Теперь нам необходимо создать папку /etc/openvpn/keys/, в нее мы поместим серверные сертификаты:
 mkdir /etc/openvpn/keys
@@ -80,6 +81,7 @@ cp -R pki/ca.crt client-keys/
 cp -R pki/tls.key client-keys/
 cp -R pki/private/client.key client-keys/
 cp -R pki/issued/client.crt client-keys/
+
 tar -cvf client.tar client-keys
 mv client.tar /root/
 
@@ -99,7 +101,7 @@ cert /etc/openvpn/keys/server.crt
 key /etc/openvpn/keys/server.key
 <peer-fingerprint>
 client_for_server2_fingerprint_replace
-<peer-fingerprint>
+</peer-fingerprint>
 dh none
 tls-auth /etc/openvpn/keys/tls.key 0
 cipher AES-256-CBC
@@ -113,8 +115,8 @@ log /dev/null
 comp-lzo
 sndbuf 524288
 rcvbuf 524288
-push "sndbuf 524288"
-push "rcvbuf 524288"
+push /"sndbuf 524288/"
+push /"rcvbuf 524288/"
 up /etc/openvpn/keys/up.sh
 down /etc/openvpn/keys/down.sh
 user nobody
@@ -136,8 +138,8 @@ echo 1 > /proc/sys/net/ipv4/ip_forward" > /etc/openvpn/keys/up.sh
 
 echo -e "#!/bin/sh
 ip route del 10.8.0.0/24 via 192.168.99.2 dev tun0
-#iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2" > /etc/openvpn/keys/down.sh
-iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE
+#iptables -D POSTROUTING -t nat --src 10.8.0.0/24 -o $INTERFACE -j SNAT --to-source $IP2
+iptables -t nat -D POSTROUTING -o tun1 -j MASQUERADE" > /etc/openvpn/keys/down.sh
 #
 
 apt install bind9 -y
