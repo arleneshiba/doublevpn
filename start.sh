@@ -53,7 +53,7 @@ sshpass -e ssh -o PasswordAuthentication=yes root@$IP2 'bash -s' < ~/./second.sh
 #torsocks ssh root@$IP2
 
 sshpass -e scp -T root@$IP2:/root/client.tar /root/
-sshpass -e scp -T root@$IP2:/root/run1.sh" /root/
+sshpass -e scp -T root@$IP2:/root/run1.sh /root/
 
 bash /root/run1.sh
 
