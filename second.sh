@@ -98,14 +98,22 @@ ca /etc/openvpn/keys/ca.crt
 cert /etc/openvpn/keys/server.crt
 key /etc/openvpn/keys/server.key
 dh none
-tls-auth /etc/openvpn/keys/tls.key 0
-cipher AES-256-CBC
-max-clients 1
+max-clients 100
 tun-mtu 1400
 persist-key
 persist-tun
 script-security 3
 keepalive 10 120
+push \"block-outside-dns\"
+tls-crypt /etc/openvpn/keys/tls.key
+cipher AES-256-GCM
+ncp-ciphers AES-256-GCM:CHACHA20-POLY1305
+tls-version-min 1.2
+verify-client-cert require
+tun-mtu-extra 32
+compress lz4-v2
+fragment 1300
+mssfix 1300
 log /dev/null
 comp-lzo
 sndbuf 524288
