@@ -63,5 +63,5 @@ cat << EOF > /root/enable_second.sh
 sed -i -e 's/client_for_server2_fingerprint_replace/$CLIENT_FOR_SERVER2_FINGERPRINT/g' /etc/openvpn/server.conf
 systemctl enable --now openvpn@server.service
 EOF
-chmood +x /root/enable_second.sh
+chmod +x /root/enable_second.sh
 sshpass -e ssh -o PasswordAuthentication=yes root@$IP2 'bash -s' < ~/./enable_second.sh
